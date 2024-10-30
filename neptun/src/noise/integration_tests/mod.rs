@@ -1,3 +1,6 @@
+// Copyright (c) 2024 Nord Security. All rights reserved.
+// SPDX-License-Identifier: BSD-3-Clause
+
 mod tests {
     use parking_lot::Mutex;
     use rand::prelude::*;

@@ -1,4 +1,5 @@
-// Copyright (c) 2019 Cloudflare, Inc. All rights reserved.
+// Copyright (c) 2024 Nord Security. All rights reserved.
+// Copyright (c) 2019-2024 Cloudflare, Inc. All rights reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 
 use parking_lot::{Mutex, RwLock};
@@ -8,7 +9,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, Shutdown, SocketAddr, SocketAddrV4, S
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::device::{AllowedIps, Error, MakeExternalBoringtun};
+use crate::device::{AllowedIps, Error, MakeExternalNeptun};
 use crate::noise::Tunn;
 
 use std::os::fd::AsRawFd;
@@ -29,7 +30,7 @@ pub struct Peer {
     endpoint: RwLock<Endpoint>,
     allowed_ips: RwLock<AllowedIps<()>>,
     preshared_key: RwLock<Option<[u8; 32]>>,
-    protect: Arc<dyn MakeExternalBoringtun>,
+    protect: Arc<dyn MakeExternalNeptun>,
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -63,7 +64,7 @@ impl Peer {
         endpoint: Option<SocketAddr>,
         allowed_ips: &[AllowedIP],
         preshared_key: Option<[u8; 32]>,
-        protect: Arc<dyn MakeExternalBoringtun>,
+        protect: Arc<dyn MakeExternalNeptun>,
     ) -> Peer {
         let pub_key = tunnel.peer_static_public();
         let mut public_key_hex = String::with_capacity(32);
@@ -211,7 +212,7 @@ mod tests {
             Some(SocketAddr::new(IpAddr::from([1, 2, 3, 4]), 54321)),
             &[],
             None,
-            Arc::new(crate::device::MakeExternalBoringtunNoop),
+            Arc::new(crate::device::MakeExternalNeptunNoop),
         );
 
         peer.connect_endpoint(12345).unwrap();

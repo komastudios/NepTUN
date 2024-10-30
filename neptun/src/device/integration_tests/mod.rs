@@ -1,7 +1,8 @@
-// Copyright (c) 2019 Cloudflare, Inc. All rights reserved.
+// Copyright (c) 2024 Nord Security. All rights reserved.
+// Copyright (c) 2019-2024 Cloudflare, Inc. All rights reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 
-// This module contains some integration tests for boringtun
+// This module contains some integration tests for neptun
 // Those tests require docker and sudo privileges to run
 #[cfg(all(test, not(target_os = "macos")))]
 mod tests {
@@ -268,7 +269,7 @@ mod tests {
                     open_uapi_socket: true,
                     #[cfg(target_os = "linux")]
                     uapi_fd: -1,
-                    protect: Arc::new(crate::device::MakeExternalBoringtunNoop),
+                    protect: Arc::new(crate::device::MakeExternalNeptunNoop),
                     firewall_process_inbound_callback: None,
                     firewall_process_outbound_callback: None,
                 },
@@ -563,7 +564,7 @@ mod tests {
                 open_uapi_socket: true,
                 #[cfg(target_os = "linux")]
                 uapi_fd: -1,
-                protect: Arc::new(crate::device::MakeExternalBoringtunNoop),
+                protect: Arc::new(crate::device::MakeExternalNeptunNoop),
                 firewall_process_inbound_callback: None,
                 firewall_process_outbound_callback: None,
             },
@@ -767,7 +768,7 @@ mod tests {
                 open_uapi_socket: true,
                 #[cfg(target_os = "linux")]
                 uapi_fd: -1,
-                protect: Arc::new(crate::device::MakeExternalBoringtunNoop),
+                protect: Arc::new(crate::device::MakeExternalNeptunNoop),
                 firewall_process_inbound_callback: None,
                 firewall_process_outbound_callback: None,
             },

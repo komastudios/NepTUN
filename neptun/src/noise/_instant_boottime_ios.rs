@@ -1,4 +1,7 @@
-#![cfg(target_os = "tvos")]
+// Copyright (c) 2024 Nord Security. All rights reserved.
+// SPDX-License-Identifier: BSD-3-Clause
+
+#![cfg(target_os = "ios")]
 #![allow(non_camel_case_types)]
 
 // This is a partial copy of std::time::Instant (ios)

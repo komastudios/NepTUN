@@ -1,3 +1,6 @@
+// Copyright (c) 2024 Nord Security. All rights reserved.
+// SPDX-License-Identifier: BSD-3-Clause
+
 use std::{
     ops::{Add, Mul, Sub},
     time::Duration,

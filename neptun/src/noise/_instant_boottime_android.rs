@@ -1,3 +1,6 @@
+// Copyright (c) 2024 Nord Security. All rights reserved.
+// SPDX-License-Identifier: BSD-3-Clause
+
 #![cfg(target_os = "android")]
 
 // This is a partial copy of std::time::Instant (android)
