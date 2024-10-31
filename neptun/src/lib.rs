@@ -5,7 +5,7 @@
 
 //! Simple implementation of the client-side of the WireGuard protocol.
 //!
-//! <code>git clone https://github.com/cloudflare/boringtun.git</code>
+//! <code>git clone https://github.com/nordsecurity/neptun.git</code>
 
 #[cfg(all(unix, feature = "device"))]
 pub mod device;

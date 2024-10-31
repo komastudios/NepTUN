@@ -1,10 +1,11 @@
-// Copyright (c) 2019 Cloudflare, Inc. All rights reserved.
+// Copyright (c) 2024 Nord Security. All rights reserved.
+// Copyright (c) 2019-2024 Cloudflare, Inc. All rights reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 
-use boringtun::device::drop_privileges::drop_privileges;
-use boringtun::device::{DeviceConfig, DeviceHandle};
 use clap::{value_parser, Arg, Command};
 use daemonize::{Daemonize, Outcome, Parent};
+use neptun::device::drop_privileges::drop_privileges;
+use neptun::device::{DeviceConfig, DeviceHandle};
 use std::fs::File;
 use std::os::unix::net::UnixDatagram;
 use std::path::PathBuf;
@@ -15,7 +16,7 @@ use tracing::Level;
 fn check_tun_name(name: &str) -> Result<String, String> {
     #[cfg(any(target_os = "macos", target_os = "ios"))]
     {
-        if boringtun::device::tun::parse_utun_name(name).is_ok() {
+        if neptun::device::tun::parse_utun_name(name).is_ok() {
             Ok(name.to_owned())
         } else {
             Err("Tunnel name must have the format 'utun[0-9]+', use 'utun' for automatic assignment".to_owned())
@@ -28,7 +29,7 @@ fn check_tun_name(name: &str) -> Result<String, String> {
 }
 
 fn main() {
-    let matches = Command::new("boringtun")
+    let matches = Command::new("neptun")
         .version(env!("CARGO_PKG_VERSION"))
         .author("Vlad Krasnov <vlad@cloudflare.com>")
         .args(&[
@@ -77,7 +78,7 @@ fn main() {
                 .env("WG_LOG_FILE")
                 .value_parser(value_parser!(PathBuf))
                 .help("Log file")
-                .default_value("/tmp/boringtun.out"),
+                .default_value("/tmp/neptun.out"),
             Arg::new("disable-drop-privileges")
                 .long("disable-drop-privileges")
                 .env("WG_SUDO")
@@ -136,10 +137,10 @@ fn main() {
             })) => {
                 let mut b = [0u8; 1];
                 if sock2.recv(&mut b).is_ok() && b[0] == 1 {
-                    println!("BoringTun started successfully");
+                    println!("NepTUN started successfully");
                     exit(first_child_exit_code)
                 } else {
-                    eprintln!("BoringTun failed to start");
+                    eprintln!("NepTUN failed to start");
                     exit(1);
                 };
             }
@@ -147,7 +148,7 @@ fn main() {
                 eprintln!("Failed to fork process: {err}");
                 exit(1);
             }
-            Outcome::Child(Ok(_)) => tracing::info!("BoringTun started successfully"),
+            Outcome::Child(Ok(_)) => tracing::info!("NepTUN started successfully"),
             Outcome::Child(Err(err)) => {
                 tracing::error!(error = ?err);
                 exit(1);
@@ -168,7 +169,7 @@ fn main() {
         #[cfg(target_os = "linux")]
         use_multi_queue: !matches.get_flag("disable-multi-queue"),
         open_uapi_socket: false,
-        protect: Arc::new(boringtun::device::MakeExternalBoringtunNoop),
+        protect: Arc::new(neptun::device::MakeExternalNeptunNoop),
         firewall_process_inbound_callback: None,
         firewall_process_outbound_callback: None,
     };
@@ -195,7 +196,7 @@ fn main() {
     sock1.send(&[1]).unwrap();
     drop(sock1);
 
-    tracing::info!("BoringTun started successfully");
+    tracing::info!("NepTUN started successfully");
 
     device_handle.wait();
 }

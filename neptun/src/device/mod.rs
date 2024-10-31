@@ -1,4 +1,5 @@
-// Copyright (c) 2019 Cloudflare, Inc. All rights reserved.
+// Copyright (c) 2024 Nord Security. All rights reserved.
+// Copyright (c) 2019-2024 Cloudflare, Inc. All rights reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 
 pub mod allowed_ips;
@@ -104,13 +105,13 @@ enum Action {
 // Event handler function
 type Handler = Box<dyn Fn(&mut LockReadGuard<Device>, &mut ThreadData) -> Action + Send + Sync>;
 
-pub trait MakeExternalBoringtun: Send + Sync {
+pub trait MakeExternalNeptun: Send + Sync {
     fn make_external(&self, socket: RawFd);
 }
 
-pub struct MakeExternalBoringtunNoop;
+pub struct MakeExternalNeptunNoop;
 
-impl MakeExternalBoringtun for MakeExternalBoringtunNoop {
+impl MakeExternalNeptun for MakeExternalNeptunNoop {
     fn make_external(&self, _socket: std::os::fd::RawFd) {}
 }
 
@@ -129,7 +130,7 @@ pub struct DeviceConfig {
     #[cfg(target_os = "linux")]
     pub use_multi_queue: bool,
     pub open_uapi_socket: bool,
-    pub protect: Arc<dyn MakeExternalBoringtun>,
+    pub protect: Arc<dyn MakeExternalNeptun>,
     pub firewall_process_inbound_callback:
         Option<Arc<dyn Fn(&[u8; 32], &[u8]) -> bool + Send + Sync>>,
     pub firewall_process_outbound_callback:
@@ -218,7 +219,7 @@ impl DeviceHandle {
                 threads.push({
                     let dev = Arc::clone(&interface_lock);
                     thread::Builder::new()
-                        .name(format!("boringtun"))
+                        .name(format!("neptun"))
                         .spawn(move || DeviceHandle::event_loop(i, &dev))?
                 });
             }

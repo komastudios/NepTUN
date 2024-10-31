@@ -1,5 +1,5 @@
 [package]
-name = "boringtun"
+name = "neptun"
 description = "an implementation of the WireGuard® protocol designed for portability and speed"
 version = "0.6.0"
 authors = [
@@ -8,7 +8,6 @@ authors = [
     "Jeff Hiner <jhiner@cloudflare.com>",
 ]
 license = "BSD-3-Clause"
-documentation = "https://docs.rs/boringtun/0.5.2/boringtun/"
 edition = "2018"
 
 [features]
