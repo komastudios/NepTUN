@@ -59,18 +59,6 @@ fn main() {
                 .value_parser(value_parser!(Level))
                 .help("Log verbosity [possible values: error, warn, info, debug, trace]")
                 .default_value("error"),
-            Arg::new("uapi-fd")
-                .long("uapi-fd")
-                .env("WG_UAPI_FD")
-                .value_parser(value_parser!(i32))
-                .help("File descriptor for the user API")
-                .default_value("-1"),
-            Arg::new("tun-fd")
-                .long("tun-fd")
-                .value_parser(value_parser!(isize))
-                .env("WG_TUN_FD")
-                .help("File descriptor for an already-existing TUN device")
-                .default_value("-1"),
             Arg::new("log")
                 .num_args(1)
                 .long("log")
@@ -97,13 +85,7 @@ fn main() {
         .get_matches();
 
     let background = !matches.get_flag("foreground");
-    #[cfg(target_os = "linux")]
-    let uapi_fd: i32 = *matches.get_one("uapi-fd").unwrap();
-    let tun_fd: isize = *matches.get_one("tun-fd").unwrap();
-    let mut tun_name: String = matches.get_one::<String>("INTERFACE_NAME").unwrap().clone();
-    if tun_fd >= 0 {
-        tun_name = matches.get_one::<String>("tun-fd").unwrap().clone();
-    }
+    let tun_name: String = matches.get_one::<String>("INTERFACE_NAME").unwrap().clone();
     let n_threads: usize = *matches.get_one("threads").unwrap();
     let log_level: Level = *matches.get_one("verbosity").unwrap();
 
@@ -163,8 +145,6 @@ fn main() {
 
     let config = DeviceConfig {
         n_threads,
-        #[cfg(target_os = "linux")]
-        uapi_fd,
         use_connected_socket: !matches.get_flag("disable-connected-udp"),
         #[cfg(target_os = "linux")]
         use_multi_queue: !matches.get_flag("disable-multi-queue"),

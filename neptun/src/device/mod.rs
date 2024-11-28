@@ -135,8 +135,6 @@ pub struct DeviceConfig {
         Option<Arc<dyn Fn(&[u8; 32], &[u8]) -> bool + Send + Sync>>,
     pub firewall_process_outbound_callback:
         Option<Arc<dyn Fn(&[u8; 32], &[u8]) -> bool + Send + Sync>>,
-    #[cfg(target_os = "linux")]
-    pub uapi_fd: i32,
 }
 
 pub struct Device {
@@ -168,9 +166,6 @@ pub struct Device {
     mtu: AtomicUsize,
 
     rate_limiter: Option<Arc<RateLimiter>>,
-
-    #[cfg(target_os = "linux")]
-    uapi_fd: i32,
 }
 
 struct ThreadData {
@@ -293,10 +288,6 @@ impl DeviceHandle {
 
     fn event_loop(thread_id: usize, device: &Lock<Device>) {
         let mut thread_local = DeviceHandle::new_thread_local(thread_id, &device.read());
-        #[cfg(not(target_os = "linux"))]
-        let uapi_fd = -1;
-        #[cfg(target_os = "linux")]
-        let uapi_fd = device.read().uapi_fd;
 
         loop {
             let mut device_lock = device.read();
@@ -323,10 +314,6 @@ impl DeviceHandle {
                         }
                     }
                     WaitResult::EoF(handler) => {
-                        if uapi_fd >= 0 && uapi_fd == handler.fd() {
-                            device_lock.trigger_exit();
-                            return;
-                        }
                         handler.cancel();
                     }
                     WaitResult::Error(e) => tracing::error!(message = "Poll error", error = ?e),
@@ -510,11 +497,6 @@ impl Device {
         let iface = Arc::new(tun.set_non_blocking()?);
         let mtu = iface.mtu()?;
 
-        #[cfg(not(target_os = "linux"))]
-        let uapi_fd = -1;
-        #[cfg(target_os = "linux")]
-        let uapi_fd = config.uapi_fd;
-
         let mut device = Device {
             queue: Arc::new(poll),
             iface,
@@ -534,18 +516,12 @@ impl Device {
             cleanup_paths: Default::default(),
             mtu: AtomicUsize::new(mtu),
             rate_limiter: None,
-            #[cfg(target_os = "linux")]
-            uapi_fd,
             #[cfg(not(target_os = "linux"))]
             update_seq: 0,
         };
 
         if device.config.open_uapi_socket {
-            if uapi_fd >= 0 {
-                device.register_api_fd(uapi_fd)?;
-            } else {
-                device.register_api_handler()?;
-            }
+            device.register_api_handler()?;
         }
         device.register_iface_handler(Arc::clone(&device.iface))?;
         device.register_notifiers()?;

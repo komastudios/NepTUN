@@ -267,8 +267,6 @@ mod tests {
                     #[cfg(target_os = "linux")]
                     use_multi_queue: true,
                     open_uapi_socket: true,
-                    #[cfg(target_os = "linux")]
-                    uapi_fd: -1,
                     protect: Arc::new(crate::device::MakeExternalNeptunNoop),
                     firewall_process_inbound_callback: None,
                     firewall_process_outbound_callback: None,
@@ -562,8 +560,6 @@ mod tests {
                 #[cfg(target_os = "linux")]
                 use_multi_queue: true,
                 open_uapi_socket: true,
-                #[cfg(target_os = "linux")]
-                uapi_fd: -1,
                 protect: Arc::new(crate::device::MakeExternalNeptunNoop),
                 firewall_process_inbound_callback: None,
                 firewall_process_outbound_callback: None,
@@ -766,8 +762,6 @@ mod tests {
                 #[cfg(target_os = "linux")]
                 use_multi_queue: true,
                 open_uapi_socket: true,
-                #[cfg(target_os = "linux")]
-                uapi_fd: -1,
                 protect: Arc::new(crate::device::MakeExternalNeptunNoop),
                 firewall_process_inbound_callback: None,
                 firewall_process_outbound_callback: None,
