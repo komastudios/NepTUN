@@ -114,26 +114,31 @@ pub fn api_exec<R: Read, W: Write>(
     reader: &mut BufReader<R>,
     writer: &mut BufWriter<W>,
 ) {
+    let mut status = 0;
     let mut cmd = String::new();
-    if reader.read_line(&mut cmd).is_ok() {
-        cmd.pop(); // pop the new line character
-        let status = match d.closed {
+    while status == 0 && reader.read_line(&mut cmd).is_ok_and(|n| n > 0) {
+        status = match d.closed {
             true => ENOENT,
             false => match cmd.as_ref() {
                 // Only two commands are legal according to the protocol, get=1 and set=1.
-                "get=1" => api_get(writer, d),
-                "set=1" => api_set(reader, d),
+                "get=1\n" => api_get(reader, writer, d),
+                "set=1\n" => api_set(reader, d),
                 _ => EIO,
             },
         };
         // The protocol requires to return an error code as the response, or zero on success
         writeln!(writer, "errno={}\n", status).ok();
+        _ = writer.flush();
+        cmd.clear();
     }
 }
 
 #[allow(unused_must_use)]
-fn api_get<W: Write>(writer: &mut BufWriter<W>, d: &Device) -> i32 {
-    // get command requires an empty line, but there is no reason to be religious about it
+fn api_get<R: Read, W: Write>(
+    reader: &mut BufReader<R>,
+    writer: &mut BufWriter<W>,
+    d: &Device,
+) -> i32 {
     if let Some(ref k) = d.key_pair {
         writeln!(writer, "private_key={}", encode_hex(k.0.to_bytes()));
     }
@@ -192,7 +197,23 @@ fn api_get<W: Write>(writer: &mut BufWriter<W>, d: &Device) -> i32 {
         writeln!(writer, "rx_bytes={}", rx_bytes);
         writeln!(writer, "tx_bytes={}", tx_bytes);
     }
-    0
+
+    // get command requires an empty line, but there is no reason to be religious about it.
+    // However we should consume it if it is present to correctly handle multi-command streams.
+    // The error is returned only if there is anything else then empty line after get=1\n
+    // If there is EOF we handle succesfully.
+    let mut buf = String::new();
+    match reader.read_line(&mut buf) {
+        Ok(1) => {
+            if buf == "\n" {
+                0
+            } else {
+                EINVAL
+            }
+        }
+        Ok(2..) => EINVAL,
+        _ => 0,
+    }
 }
 
 fn api_set<R: Read>(reader: &mut BufReader<R>, d: &mut LockReadGuard<Device>) -> i32 {
@@ -201,12 +222,13 @@ fn api_set<R: Read>(reader: &mut BufReader<R>, d: &mut LockReadGuard<Device>) ->
         |device| {
             device.cancel_yield();
 
-            let mut cmd = String::new();
+            let mut buf = String::new();
 
-            while reader.read_line(&mut cmd).is_ok() {
-                cmd.pop(); // remove newline if any
+            while reader.read_line(&mut buf).is_ok() {
+                let cmd = buf.trim_end(); // remove newline if any
+
                 if cmd.is_empty() {
-                    return 0; // Done
+                    return 0; // Empty line ends set=1 command
                 }
                 {
                     let parsed_cmd: Vec<&str> = cmd.split('=').collect();
@@ -264,7 +286,7 @@ fn api_set<R: Read>(reader: &mut BufReader<R>, d: &mut LockReadGuard<Device>) ->
                         _ => return EINVAL,
                     }
                 }
-                cmd.clear();
+                buf.clear();
             }
 
             0

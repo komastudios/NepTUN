@@ -159,7 +159,7 @@ pub struct Device {
     peers_by_idx: HashMap<u32, Arc<Peer>>,
     next_index: IndexLfsr,
 
-    pub config: DeviceConfig,
+    config: DeviceConfig,
 
     cleanup_paths: Vec<String>,
 
