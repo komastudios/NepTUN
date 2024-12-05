@@ -267,8 +267,6 @@ mod tests {
                     #[cfg(target_os = "linux")]
                     use_multi_queue: true,
                     open_uapi_socket: true,
-                    #[cfg(target_os = "linux")]
-                    uapi_fd: -1,
                     protect: Arc::new(crate::device::MakeExternalNeptunNoop),
                     firewall_process_inbound_callback: None,
                     firewall_process_outbound_callback: None,
@@ -400,27 +398,25 @@ mod tests {
             }
         }
 
-        /// Issue a get command on the interface
-        fn wg_get(&self) -> String {
+        fn wg_uapi_cmd(&self, cmd: &str) -> String {
             let path = format!("/var/run/wireguard/{}.sock", self.name);
-
             let mut socket = UnixStream::connect(path).unwrap();
-            write!(socket, "get=1\n\n").unwrap();
+            socket.write(cmd.as_bytes()).unwrap();
+            socket.shutdown(std::net::Shutdown::Write).unwrap();
 
             let mut ret = String::new();
             socket.read_to_string(&mut ret).unwrap();
             ret
         }
 
+        /// Issue a get command on the interface
+        fn wg_get(&self) -> String {
+            self.wg_uapi_cmd("get=1\n\n")
+        }
+
         /// Issue a set command on the interface
         fn wg_set(&self, setting: &str) -> String {
-            let path = format!("/var/run/wireguard/{}.sock", self.name);
-            let mut socket = UnixStream::connect(path).unwrap();
-            write!(socket, "set=1\n{}\n\n", setting).unwrap();
-
-            let mut ret = String::new();
-            socket.read_to_string(&mut ret).unwrap();
-            ret
+            self.wg_uapi_cmd(&format!("set=1\n{}\n\n", setting))
         }
 
         /// Assign a listen_port to the interface
@@ -475,6 +471,33 @@ mod tests {
         let wg = WGHandle::init("192.0.2.0".parse().unwrap(), "::2".parse().unwrap());
         let response = wg.wg_get();
         assert!(response.ends_with("errno=0\n\n"));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_wireguard_uapi_chaining() {
+        let wg = WGHandle::init("192.0.2.0".parse().unwrap(), "::2".parse().unwrap());
+
+        let response = wg.wg_uapi_cmd("get=1\n\nget=1\n\n");
+        assert_eq!(response.matches("errno=0\n\n").count(), 2);
+
+        let response = wg.wg_uapi_cmd("get=1\n\nset=1\nlisten_port=12345\n\nget=1\n\n");
+        assert_eq!(response.matches("errno=0\n\n").count(), 3);
+    }
+
+    #[test]
+    #[ignore]
+    fn test_wireguard_uapi_set_without_proper_ending() {
+        let wg = WGHandle::init("192.0.2.0".parse().unwrap(), "::2".parse().unwrap());
+
+        // Even though according to the uapi specification this is not a valid command
+        // because the \n\n is missing, wireguard-go seems to accept it. That's why
+        // we accept it too. This test tests that the last character is not being clipped
+        // as it was done by the previous implementation.
+        let response = wg.wg_uapi_cmd("set=1\nlisten_port=12345");
+        assert_eq!(response, "errno=0\n\n");
+        let response = wg.wg_uapi_cmd("get=1\n");
+        assert_eq!(response, "listen_port=12345\nerrno=0\n\n");
     }
 
     #[test]
@@ -562,8 +585,6 @@ mod tests {
                 #[cfg(target_os = "linux")]
                 use_multi_queue: true,
                 open_uapi_socket: true,
-                #[cfg(target_os = "linux")]
-                uapi_fd: -1,
                 protect: Arc::new(crate::device::MakeExternalNeptunNoop),
                 firewall_process_inbound_callback: None,
                 firewall_process_outbound_callback: None,
@@ -766,8 +787,6 @@ mod tests {
                 #[cfg(target_os = "linux")]
                 use_multi_queue: true,
                 open_uapi_socket: true,
-                #[cfg(target_os = "linux")]
-                uapi_fd: -1,
                 protect: Arc::new(crate::device::MakeExternalNeptunNoop),
                 firewall_process_inbound_callback: None,
                 firewall_process_outbound_callback: None,

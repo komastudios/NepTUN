@@ -386,10 +386,6 @@ impl<'a, H> EventGuard<'a, H> {
         std::mem::forget(self); // Don't call the regular drop that would enable the event
     }
 
-    pub fn fd(&self) -> i32 {
-        self.event.fd
-    }
-
     /// Change the event flags to enable or disable notifying when the fd is writable
     pub fn notify_writable(&mut self, enabled: bool) {
         let flags = if enabled {
