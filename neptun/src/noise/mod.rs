@@ -213,7 +213,7 @@ impl Tunn {
         let static_public = x25519::PublicKey::from(&static_private);
 
         let tunn = Tunn {
-            peer_static_public: peer_static_public,
+            peer_static_public,
             handshake: Handshake::new(
                 static_private,
                 static_public,

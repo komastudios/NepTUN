@@ -1,4 +1,3 @@
-use anyhow::Result;
 use clap::Parser;
 use xshell::{cmd, Shell};
 
@@ -22,7 +21,7 @@ impl GitWorktree {
             .expect("Failed to create base worktree");
         GitWorktree {
             name: name.to_string(),
-            sh: sh,
+            sh,
         }
     }
 }
