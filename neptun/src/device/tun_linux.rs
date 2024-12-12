@@ -120,7 +120,7 @@ impl TunSocket {
 
     pub fn new_from_fd(fd: RawFd) -> Result<TunSocket, Error> {
         #[cfg(target_os = "linux")]
-        let mut ifr = ifreq {
+        let ifr = ifreq {
             ifr_name: [0; IFNAMSIZ],
             ifr_ifru: IfrIfru { ifru_intval: 0 },
         };
@@ -140,29 +140,11 @@ impl TunSocket {
         if flags & IFF_TUN as c_short == 0 {
             return Err(Error::InvalidTunnelName);
         }
-        let name = std::str::from_utf8(&ifr.ifr_name[..])
+        let name = std::ffi::CStr::from_bytes_until_nul(&ifr.ifr_name)
+            .map_err(|_| Error::InvalidTunnelName)?
+            .to_str()
             .map_err(|_| Error::InvalidTunnelName)?
             .to_owned();
-
-        #[cfg(target_os = "linux")]
-        {
-            ifr.ifr_ifru = IfrIfru {
-                ifru_flags: (IFF_TUN | IFF_MULTI_QUEUE) as _,
-            };
-            if unsafe { ioctl(fd, TUNSETIFF as _, &ifr) } < 0 {
-                let error = Error::IOCtl(io::Error::last_os_error());
-                let flags = unsafe { format!("{:x}", ifr.ifr_ifru.ifru_flags) };
-                error!(
-                    ?error,
-                    op = "TUNSETIFF",
-                    name,
-                    flags,
-                    "Failed to configure tunnel flags"
-                );
-                return Err(error);
-            }
-        }
-
         Ok(TunSocket { fd, name })
     }
 
