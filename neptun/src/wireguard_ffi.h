@@ -1,10 +1,17 @@
 // Copyright (c) 2019 Cloudflare, Inc. All rights reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 
-#pragma once
+#ifndef WIREGUARD_FFI_H
+#define WIREGUARD_FFI_H
+#endif
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct wireguard_tunnel; // This corresponds to the Rust type
 
@@ -74,9 +81,9 @@ int check_base64_encoded_x25519_key(const char *key);
 bool set_logging_function(void (*log_func)(const char *));
 
 // Allocate a new tunnel
-struct wireguard_tunnel *new_tunnel(const char *static_private,
-                                    const char *server_static_public,
-                                    const char *preshared_key,
+struct wireguard_tunnel *new_tunnel(const struct x25519_key *static_private,
+                                    const struct x25519_key *server_static_public,
+                                    const struct x25519_key *preshared_key,
                                     uint16_t keep_alive, // Keep alive interval in seconds
                                     uint32_t index);      // The 24bit index prefix to be used for session indexes
 
@@ -104,3 +111,7 @@ struct wireguard_result wireguard_force_handshake(const struct wireguard_tunnel 
                                                   uint32_t dst_size);
 
 struct stats wireguard_stats(const struct wireguard_tunnel *tunnel);
+
+#ifdef __cplusplus
+}
+#endif

@@ -16,13 +16,13 @@ use rand_core::OsRng;
 use tracing;
 use tracing_subscriber::fmt;
 
-use crate::serialization::KeyBytes;
+//use crate::serialization::KeyBytes;
 use std::ffi::{CStr, CString};
 use std::io::{Error, ErrorKind, Write};
 use std::os::raw::c_char;
 use std::panic;
 use std::ptr;
-use std::ptr::null_mut;
+//use std::ptr::null_mut;
 use std::slice;
 use std::sync::Once;
 
@@ -242,48 +242,28 @@ pub unsafe extern "C" fn set_logging_function(
 /// Keys must be valid base64 encoded 32-byte keys.
 #[no_mangle]
 pub unsafe extern "C" fn new_tunnel(
-    static_private: *const c_char,
-    server_static_public: *const c_char,
-    preshared_key: *const c_char,
+    static_private: *const x25519_key, // private_key: x25519_key
+    server_static_public: *const x25519_key,
+    preshared_key: *const x25519_key,
     keep_alive: u16,
     index: u32,
 ) -> *mut Mutex<Tunn> {
-    let c_str = CStr::from_ptr(static_private);
-    let static_private = match c_str.to_str() {
-        Err(_) => return ptr::null_mut(),
-        Ok(string) => string,
+    let private_key = if static_private.is_null() {
+        return ptr::null_mut()
+    } else {
+        StaticSecret::from(static_private.read().key)
     };
 
-    let c_str = CStr::from_ptr(server_static_public);
-    let server_static_public = match c_str.to_str() {
-        Err(_) => return ptr::null_mut(),
-        Ok(string) => string,
+    let public_key = if server_static_public.is_null() {
+        return ptr::null_mut()
+    } else {
+        PublicKey::from(server_static_public.read().key)
     };
 
     let preshared_key = if preshared_key.is_null() {
         None
     } else {
-        let c_str = CStr::from_ptr(preshared_key);
-
-        if let Ok(string) = c_str.to_str() {
-            if let Ok(key) = string.parse::<KeyBytes>() {
-                Some(key.0)
-            } else {
-                return null_mut();
-            }
-        } else {
-            return null_mut();
-        }
-    };
-
-    let private_key = match static_private.parse::<KeyBytes>() {
-        Err(_) => return ptr::null_mut(),
-        Ok(key) => StaticSecret::from(key.0),
-    };
-
-    let public_key = match server_static_public.parse::<KeyBytes>() {
-        Err(_) => return ptr::null_mut(),
-        Ok(key) => PublicKey::from(key.0),
+        Some(StaticSecret::from(preshared_key.read().key).to_bytes())
     };
 
     let keep_alive = if keep_alive == 0 {
