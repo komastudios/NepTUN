@@ -2,6 +2,10 @@
 
 #include "TestCommon.h"
 
+#include <utility>
+#include <optional>
+#include <span>
+
 struct PtrDeleter {
     void operator()(struct wireguard_tunnel *t) const
     {
@@ -9,8 +13,78 @@ struct PtrDeleter {
     }
 };
 
-using TunnelPtr = std::unique_ptr<struct wireguard_tunnel, PtrDeleter>;
+using TunnelHnd = std::unique_ptr<struct wireguard_tunnel, PtrDeleter>;
 using ByteVec = std::vector<uint8_t>;
+using ByteSpan = std::span<const uint8_t>;
+
+struct StaticKey {
+    struct wireguard_x25519_key key {};
+};
+
+struct PublicKey {
+    struct wireguard_x25519_key key {};
+};
+
+struct PrivateKey {
+    StaticKey priv {};
+    PublicKey pub {};
+
+    static PrivateKey Generate()
+    {
+        auto key = wireguard_x25519_secret_key();
+        return { key, wireguard_x25519_public_key(key) };
+    }
+};
+
+struct TunnelResult {
+    struct wireguard_result res {};
+    ByteVec data;
+    void read(const uint8_t* src, size_t capa)
+    {
+        data.resize(res.size < capa ? res.size : capa);
+        if (!data.empty())
+            memcpy(data.data(), src, data.size());
+    }
+};
+
+struct Tunnel {
+    TunnelHnd hnd;
+    PrivateKey key;
+    PublicKey serverKey;
+
+    std::array<uint8_t, MAX_WIREGUARD_PACKET_SIZE> buffer {};
+
+    static Tunnel Create(const PrivateKey& key, const PublicKey& serverKey,
+        const std::optional<StaticKey>& sharedKey, uint16_t keep_alive, uint32_t index)
+    {
+        return Tunnel {
+            .hnd = TunnelHnd {wireguard_new_tunnel(&key.priv.key, &serverKey.key,
+                sharedKey.has_value() ? &sharedKey->key : nullptr, keep_alive, index) },
+            .key = key,
+            .serverKey = serverKey
+        };
+    }
+
+    TunnelResult forceHandshake()
+    {
+        TunnelResult r;
+        r.res = wireguard_force_handshake(hnd.get(), buffer.data(), buffer.size());
+        r.read(buffer.data(), buffer.size());
+        return r;
+    }
+
+    static std::pair<bool, PublicKey> ParseHandshakeAnon(const PrivateKey& key, ByteSpan data)
+    {
+        PublicKey k {};
+        int err = wireguard_parse_handshake_anon(&key.priv.key, &key.pub.key, data.data(), data.size(), &k.key);
+        return std::make_pair(err == 0, k);
+    }
+
+    void close()
+    {
+        hnd.reset();
+    }
+};
 
 namespace {
 
@@ -35,59 +109,72 @@ TEST(Keys, GenerateAndRoundtrip)
     EXPECT_EQ(pubkeyBase64, print_key(&pubkd));
 }
 
-struct Tunnel : testing::Test {
-    std::array<uint8_t, MAX_WIREGUARD_PACKET_SIZE> buffer {};
-    wireguard_result result {};
+struct TunnelTest : testing::Test {
+};
 
-    ByteVec getBytes()
+TEST_F(TunnelTest, CreateAndDestroy)
+{
+    auto key = PrivateKey::Generate();
+    auto serverKey = PrivateKey::Generate();
+    auto tunnel = Tunnel::Create(key, serverKey.pub, {}, 0, 0);
+    EXPECT_TRUE(tunnel.hnd.get());
+
+    tunnel.close();
+    EXPECT_FALSE(tunnel.hnd.get());
+}
+
+TEST_F(TunnelTest, HandleAnonHandshake)
+{
+    auto key = PrivateKey::Generate();
+    auto serverKey = PrivateKey::Generate();
+
+    auto tunnel = Tunnel::Create(key, serverKey.pub, {}, 0, 0);
+    EXPECT_TRUE(tunnel.hnd.get());
+
+    auto r = tunnel.forceHandshake();
+    EXPECT_EQ(r.res.op, WRITE_TO_NETWORK);
+    auto msgHandshake = r.data;
+    EXPECT_EQ(msgHandshake.size(), r.res.size);
+
+    auto [success, peerKey] = Tunnel::ParseHandshakeAnon(serverKey, msgHandshake);
+    EXPECT_TRUE(success);
+
+    std::string expectedKey { print_key(&key.pub.key) };
+    std::string parsedKey { print_key(&peerKey.key) };
+    EXPECT_EQ(parsedKey, expectedKey);
+}
+
+struct TwoTunnelTest : TunnelTest
+{
+    PrivateKey keyA;
+    PrivateKey keyB;
+    std::optional<StaticKey> sharedKey;
+    uint16_t keepAlive {};
+    uint32_t index {};
+
+    Tunnel tunnelA;
+    Tunnel tunnelB;
+
+    void SetUp() override
     {
-        ByteVec bytes;
-        bytes.resize(result.size);
-        if (!bytes.empty())
-            memcpy(bytes.data(), buffer.data(), result.size);
-        return bytes;
+        TunnelTest::SetUp();
+
+        keyA = PrivateKey::Generate();
+        keyB = PrivateKey::Generate();
+    }
+
+    void CreateTunnels()
+    {
+        tunnelA = Tunnel::Create(keyA, keyB.pub, sharedKey, keepAlive, index);
+        tunnelB = Tunnel::Create(keyB, keyA.pub, sharedKey, keepAlive, index);
     }
 };
 
-TEST_F(Tunnel, CreateAndDestroy)
+TEST_F(TwoTunnelTest, CreateAndDestroy)
 {
-    auto key = wireguard_x25519_secret_key();
-    auto pubkeyServer = wireguard_x25519_public_key(wireguard_x25519_secret_key());
+    CreateTunnels();
 
-    TunnelPtr tunnel {wireguard_new_tunnel(&key, &pubkeyServer, nullptr, 0, 0)};
-    EXPECT_TRUE(tunnel.get());
 
-    tunnel.reset();
-    EXPECT_FALSE(tunnel.get());
-}
-
-TEST_F(Tunnel, HandleAnonHandshake)
-{
-    auto key = wireguard_x25519_secret_key();
-    auto pubkey = wireguard_x25519_public_key(key);
-    auto serverKey = wireguard_x25519_secret_key();
-    auto pubkeyServer = wireguard_x25519_public_key(serverKey);
-
-    TunnelPtr tunnel {wireguard_new_tunnel(&key, &pubkeyServer, nullptr, 0, 0)};
-    EXPECT_TRUE(tunnel.get());
-
-    result = wireguard_force_handshake(tunnel.get(),
-      buffer.data(),
-      buffer.size());
-
-    dump_result(result, buffer.data());
-    EXPECT_EQ(result.op, WRITE_TO_NETWORK);
-    auto msgHandshake = getBytes();
-    EXPECT_EQ(msgHandshake.size(), result.size);
-
-    struct wireguard_x25519_key k {};
-    int32_t err = wireguard_parse_handshake_anon(&serverKey, &pubkeyServer,
-        msgHandshake.data(), msgHandshake.size(), &k);
-    EXPECT_EQ(err, 0);
-
-    std::string expectedKey { print_key(&pubkey) };
-    std::string parsedKey { print_key(&k) };
-    EXPECT_EQ(parsedKey, expectedKey);
 }
 
 } // namespace
