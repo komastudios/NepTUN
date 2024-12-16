@@ -18,6 +18,7 @@ struct wireguard_tunnel; // This corresponds to the Rust type
 enum
 {
     MAX_WIREGUARD_PACKET_SIZE = 65536 + 64,
+    HANDSHAKE_INIT_SZ = 148,
 };
 
 enum result_type
@@ -110,7 +111,11 @@ struct wireguard_result wireguard_force_handshake(const struct wireguard_tunnel 
                                                   uint8_t *dst,
                                                   uint32_t dst_size);
 
-struct stats wireguard_stats(const struct wireguard_tunnel *tunnel);
+int32_t wireguard_parse_handshake_anon(const struct x25519_key *private_key,
+                                    const struct x25519_key *public_key,
+                                    const uint8_t *src,
+                                    uint32_t src_size,
+                                    struct x25519_key *peer_key);
 
 #ifdef __cplusplus
 }

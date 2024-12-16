@@ -6,7 +6,7 @@
 #![allow(clippy::missing_safety_doc)]
 
 //! C bindings for the BoringTun library
-use super::noise::{Tunn, TunnResult};
+use super::noise::{Packet, Tunn, TunnResult};
 use crate::x25519::{PublicKey, StaticSecret};
 use base64::{decode, encode};
 use hex::encode as encode_hex;
@@ -25,6 +25,9 @@ use std::ptr;
 //use std::ptr::null_mut;
 use std::slice;
 use std::sync::Once;
+use super::noise::handshake::parse_handshake_anon;
+
+const HANDSHAKE_INIT_SZ: usize = 148;
 
 static PANIC_HOOK: Once = Once::new();
 
@@ -374,4 +377,50 @@ pub unsafe extern "C" fn wireguard_stats(tunnel: *const Mutex<Tunn>) -> stats {
         estimated_rtt: estimated_rtt.map(|r| r as i32).unwrap_or(-1),
         reserved: [0u8; 56],
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn wireguard_parse_handshake_anon(private_key_ptr: *const x25519_key, // private_key: x25519_key
+                                                        public_key_ptr: *const x25519_key,
+                                                        src: *const u8,
+                                                        src_size: u32,
+                                                        peer_key: *mut x25519_key) -> i32
+{
+    if src.is_null() || (src_size as usize) < HANDSHAKE_INIT_SZ {
+        return -1
+    }
+
+    let private_key = if private_key_ptr.is_null() {
+        return -1
+    } else {
+        StaticSecret::from(private_key_ptr.read().key)
+    };
+
+    let public_key = if public_key_ptr.is_null() {
+        return -1
+    } else {
+        PublicKey::from(public_key_ptr.read().key)
+    };
+
+    let src = slice::from_raw_parts(src, src_size as usize);
+    let p = Tunn::parse_incoming_packet(src).unwrap();
+
+    let peer = match &p {
+        Packet::HandshakeInit(p) => {
+            parse_handshake_anon(&private_key, &public_key, p)
+                .ok()
+                .and_then(|hh| {
+                    Some(hh.peer_static_public)
+                })
+        }
+        _ => return -1,
+    };
+
+    if !peer_key.is_null() {
+        peer_key.write(x25519_key {
+            key: peer.unwrap()
+        })
+    }
+
+    return 0;
 }

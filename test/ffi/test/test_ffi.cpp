@@ -10,6 +10,7 @@ struct PtrDeleter {
 };
 
 using TunnelPtr = std::unique_ptr<struct wireguard_tunnel, PtrDeleter>;
+using ByteVec = std::vector<uint8_t>;
 
 namespace {
 
@@ -34,7 +35,21 @@ TEST(Keys, GenerateAndRoundtrip)
     EXPECT_EQ(pubkeyBase64, print_key(&pubkd));
 }
 
-TEST(Tunnel, CreateAndDestroy)
+struct Tunnel : testing::Test {
+    std::array<uint8_t, MAX_WIREGUARD_PACKET_SIZE> buffer {};
+    wireguard_result result {};
+
+    ByteVec getBytes()
+    {
+        ByteVec bytes;
+        bytes.resize(result.size);
+        if (!bytes.empty())
+            memcpy(bytes.data(), buffer.data(), result.size);
+        return bytes;
+    }
+};
+
+TEST_F(Tunnel, CreateAndDestroy)
 {
     auto key = x25519_secret_key();
     auto pubkeyServer = x25519_public_key(x25519_secret_key());
@@ -44,6 +59,35 @@ TEST(Tunnel, CreateAndDestroy)
 
     tunnel.reset();
     EXPECT_FALSE(tunnel.get());
+}
+
+TEST_F(Tunnel, HandleAnonHandshake)
+{
+    auto key = x25519_secret_key();
+    auto pubkey = x25519_public_key(key);
+    auto serverKey = x25519_secret_key();
+    auto pubkeyServer = x25519_public_key(serverKey);
+
+    TunnelPtr tunnel {new_tunnel(&key, &pubkeyServer, nullptr, 0, 0)};
+    EXPECT_TRUE(tunnel.get());
+
+    result = wireguard_force_handshake(tunnel.get(),
+      buffer.data(),
+      buffer.size());
+
+    dump_result(result, buffer.data(), buffer.size());
+    EXPECT_EQ(result.op, WRITE_TO_NETWORK);
+    auto msgHandshake = getBytes();
+    EXPECT_EQ(msgHandshake.size(), result.size);
+
+    struct x25519_key k {};
+    int32_t err = wireguard_parse_handshake_anon(&serverKey, &pubkeyServer,
+        msgHandshake.data(), msgHandshake.size(), &k);
+    EXPECT_EQ(err, 0);
+
+    std::string expectedKey { print_key(&pubkey) };
+    std::string parsedKey { print_key(&k) };
+    EXPECT_EQ(parsedKey, expectedKey);
 }
 
 } // namespace
