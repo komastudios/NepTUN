@@ -16,6 +16,7 @@
 
 #define DEFAULT_PORT 5123
 #define DEFAULT_KEEPALIVE 15
+#define DEFAULT_HEXDUMP_LINE_LENGTH 16
 
 int setup_signal_handlers(void);
 
@@ -30,6 +31,8 @@ int load_keypair(const char* name, struct x25519_key* key, struct x25519_key* pu
 int save_key(const char* name, struct x25519_key* key, struct x25519_key* pubkey);
 
 void dump_key(const char* name, struct x25519_key* pubkey);
+
+void dump_bytes(const uint8_t* buffer, size_t buffer_size);
 
 void dump_result(struct wireguard_result result, const uint8_t* buffer, size_t buffer_size);
 

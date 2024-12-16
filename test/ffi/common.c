@@ -135,9 +135,52 @@ static const char* result_type_str(int type)
     return "UNKNOWN";
 }
 
+static void print_line(const uint8_t* buffer, size_t num_bytes, size_t offset, size_t line_length, FILE* f) {
+    fprintf(f, "%6X |", offset);
+
+    for (size_t i = 0; i < line_length; i++) {
+        if (i > 0 && i % 4 == 0) {
+            fprintf(f, " ");
+        }
+        if (i < num_bytes) {
+            fprintf(f, " %02X", buffer[i]);
+        } else {
+            fprintf(f, "   ");
+        }
+    }
+
+    fprintf(f, " | ");
+
+    for (size_t i = 0; i < num_bytes; i++) {
+        if (buffer[i] > 31 && buffer[i] < 127) {
+            fprintf(f, "%c", buffer[i]);
+        } else {
+            fprintf(f, ".");
+        }
+    }
+
+    fprintf(f, "\n");
+}
+
+void dump_bytes(const uint8_t* buffer, size_t buffer_size)
+{
+    if (!buffer || !buffer_size) {
+        return;
+    }
+
+    size_t offset = 0;
+    const size_t line_length = DEFAULT_HEXDUMP_LINE_LENGTH;
+    while (offset < buffer_size) {
+        const size_t num_bytes = offset + line_length < buffer_size ? line_length : buffer_size - offset;
+        print_line(buffer+offset, num_bytes, offset, line_length, stderr);
+        offset += num_bytes;
+    }
+}
+
 void dump_result(struct wireguard_result result, const uint8_t* buffer, size_t buffer_size)
 {
     fprintf(stderr, "[wg] result (op=%s): [%d bytes] \n", result_type_str(result.op), (int)result.size);
+    dump_bytes(buffer, result.size);
 }
 
 const char* print_key(struct x25519_key* pubkey)
