@@ -1,3 +1,16 @@
+add_library(common STATIC common.c common.h)
+target_include_directories(common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(common PUBLIC neptun)
+
+add_executable(keygen keygen.c)
+target_link_libraries(keygen PRIVATE common)
+
+add_executable(client client.c)
+target_link_libraries(client PRIVATE common)
+
+add_executable(server server.c)
+target_link_libraries(server PRIVATE common)
+
 macro(package_add_test TESTNAME)
   # create an exectuable in which the tests will be stored
   add_executable(${TESTNAME} ${ARGN})

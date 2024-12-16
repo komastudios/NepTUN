@@ -136,7 +136,7 @@ static const char* result_type_str(int type)
 }
 
 static void print_line(const uint8_t* buffer, size_t num_bytes, size_t offset, size_t line_length, FILE* f) {
-    fprintf(f, "%6X |", offset);
+    fprintf(f, "%6X |", (uint32_t)offset);
 
     for (size_t i = 0; i < line_length; i++) {
         if (i > 0 && i % 4 == 0) {
@@ -177,7 +177,7 @@ void dump_bytes(const uint8_t* buffer, size_t buffer_size)
     }
 }
 
-void dump_result(struct wireguard_result result, const uint8_t* buffer, size_t buffer_size)
+void dump_result(struct wireguard_result result, const uint8_t* buffer)
 {
     fprintf(stderr, "[wg] result (op=%s): [%d bytes] \n", result_type_str(result.op), (int)result.size);
     dump_bytes(buffer, result.size);
@@ -255,7 +255,7 @@ int load_key_base64(struct wireguard_x25519_key* key, const char* input)
 
 void wg_log_print(const char *ch)
 {
-    fprintf("[wg] %s", ch);
+    fprintf(stderr, "[wg] %s", ch);
 }
 
 volatile sig_atomic_t gSignalStatus;

@@ -75,7 +75,7 @@ TEST_F(Tunnel, HandleAnonHandshake)
       buffer.data(),
       buffer.size());
 
-    dump_result(result, buffer.data(), buffer.size());
+    dump_result(result, buffer.data());
     EXPECT_EQ(result.op, WRITE_TO_NETWORK);
     auto msgHandshake = getBytes();
     EXPECT_EQ(msgHandshake.size(), result.size);

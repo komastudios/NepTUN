@@ -38,7 +38,7 @@ void dump_key(const char* name, struct wireguard_x25519_key* pubkey);
 
 void dump_bytes(const uint8_t* buffer, size_t buffer_size);
 
-void dump_result(struct wireguard_result result, const uint8_t* buffer, size_t buffer_size);
+void dump_result(struct wireguard_result result, const uint8_t* buffer);
 
 const char* print_key(struct wireguard_x25519_key* pubkey);
 
