@@ -8,6 +8,7 @@ The project consists of two parts:
 
 ### Building
 
+- FFI bindings: `cargo build --lib --features "ffi-bindings" --release`
 - Library only: `cargo build --lib --no-default-features --release [--target $(TARGET_TRIPLE)]`
 - Executable: `cargo build --bin neptun-cli --release [--target $(TARGET_TRIPLE)]`
 

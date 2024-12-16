@@ -10,6 +10,9 @@
 #[cfg(all(unix, feature = "device"))]
 pub mod device;
 
+#[cfg(feature = "ffi-bindings")]
+pub mod ffi;
+
 #[cfg(not(feature = "mock-instant"))]
 pub(crate) mod sleepyinstant;
 
