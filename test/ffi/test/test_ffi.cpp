@@ -2,6 +2,15 @@
 
 #include "TestCommon.h"
 
+struct PtrDeleter {
+    void operator()(struct wireguard_tunnel *t) const
+    {
+        tunnel_free(t);
+    }
+};
+
+using TunnelPtr = std::unique_ptr<struct wireguard_tunnel, PtrDeleter>;
+
 namespace {
 
 using ::testing::Eq;
@@ -23,6 +32,18 @@ TEST(Keys, GenerateAndRoundtrip)
 
     auto pubkd = x25519_public_key(k);
     EXPECT_EQ(pubkeyBase64, print_key(&pubkd));
+}
+
+TEST(Tunnel, CreateAndDestroy)
+{
+    auto key = x25519_secret_key();
+    auto pubkeyServer = x25519_public_key(x25519_secret_key());
+
+    TunnelPtr tunnel {new_tunnel(&key, &pubkeyServer, nullptr, 0, 0)};
+    EXPECT_TRUE(tunnel.get());
+
+    tunnel.reset();
+    EXPECT_FALSE(tunnel.get());
 }
 
 } // namespace
