@@ -16,7 +16,7 @@ endmacro()
 
 package_add_test(test_ffi
   test_ffi.cpp)
-target_link_libraries(test_ffi PRIVATE 
+target_link_libraries(test_ffi PUBLIC
   # absl::strings absl::str_format 
-  gtest_main
-  common)
+        common
+        gtest_main)

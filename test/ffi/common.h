@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "wireguard_ffi.h"
 
 #include <stdio.h>
@@ -41,3 +45,7 @@ const char* print_key(struct x25519_key* pubkey);
 int load_key_base64(struct x25519_key* key, const char* input);
 
 int sleep_ms(uint32_t ms);
+
+#ifdef __cplusplus
+}
+#endif
