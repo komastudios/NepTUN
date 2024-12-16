@@ -299,7 +299,7 @@ pub unsafe extern "C" fn new_tunnel(
         keep_alive,
         index,
         None,
-    )));
+    ).expect("Failed to create tunnel")));
 
     PANIC_HOOK.call_once(|| {
         // FFI won't properly unwind on panic, but it will if we cause a segmentation fault

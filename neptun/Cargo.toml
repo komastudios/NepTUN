@@ -15,7 +15,7 @@ default = []
 device = ["socket2", "thiserror"]
 # mocks std::time::Instant with mock_instant
 mock-instant = ["mock_instant"]
-ffi-bindings = []
+ffi-bindings = ["tracing-subscriber"]
 
 [dependencies]
 base64 = "0.13"
@@ -36,6 +36,7 @@ hmac = "0.12"
 mock_instant = { version = "0.2", optional = true }
 socket2 = { version = "0.5", features = ["all"], optional = true }
 thiserror = { version = "1", optional = true }
+tracing-subscriber = { version = "0.3", optional = true }
 
 [target.'cfg(any(target_os = "macos", target_os = "ios", target_os = "tvos"))'.dependencies]
 dispatch = { git = "https://github.com/NordSecurity/rust-dispatch.git", rev = "13447cd7221a74ebcce1277ae0cfc9a421a28ec5" }
