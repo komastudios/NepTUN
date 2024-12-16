@@ -36,7 +36,7 @@ struct wireguard_result
     size_t size;
 };
 
-struct stats
+struct wireguard_stats
 {
     int64_t time_since_last_handshake;
     size_t tx_bytes;
@@ -46,24 +46,24 @@ struct stats
     uint8_t reserved[56];  // decrement appropriately when adding new fields
 };
 
-struct x25519_key
+struct wireguard_x25519_key
 {
     uint8_t key[32];
 };
 
 // Generates a fresh x25519 secret key
-struct x25519_key x25519_secret_key();
+struct wireguard_x25519_key wireguard_x25519_secret_key();
 // Computes an x25519 public key from a secret key
-struct x25519_key x25519_public_key(struct x25519_key private_key);
+struct wireguard_x25519_key wireguard_x25519_public_key(struct wireguard_x25519_key private_key);
 // Encodes a public or private x25519 key to base64. Must be freed with x25519_key_to_str_free.
-const char *x25519_key_to_base64(struct x25519_key key);
+const char *wireguard_x25519_key_to_base64(struct wireguard_x25519_key key);
 // Encodes a public or private x25519 key to hex. Must be freed with x25519_key_to_str_free.
-const char *x25519_key_to_hex(struct x25519_key key);
+const char *wireguard_x25519_key_to_hex(struct wireguard_x25519_key key);
 // Free string pointer obtained from either x25519_key_to_base64 or x25519_key_to_hex
-void x25519_key_to_str_free(const char *key_str);
+void wireguard_x25519_key_to_str_free(const char *key_str);
 // Check if a null terminated string represents a valid x25519 key
 // Returns 0 if not
-int check_base64_encoded_x25519_key(const char *key);
+int wireguard_check_base64_encoded_x25519_key(const char *key);
 
 /// Sets the default tracing_subscriber to write to `log_func`.
 ///
@@ -79,17 +79,17 @@ int check_base64_encoded_x25519_key(const char *key);
 ///
 /// `c_char` will be freed by the library after calling `log_func`. If the value needs
 /// to be stored then `log_func` needs to create a copy, e.g. `strcpy`.
-bool set_logging_function(void (*log_func)(const char *));
+bool wireguard_set_logging_function(void (*log_func)(const char *));
 
 // Allocate a new tunnel
-struct wireguard_tunnel *new_tunnel(const struct x25519_key *static_private,
-                                    const struct x25519_key *server_static_public,
-                                    const struct x25519_key *preshared_key,
+struct wireguard_tunnel *wireguard_new_tunnel(const struct wireguard_x25519_key *static_private,
+                                    const struct wireguard_x25519_key *server_static_public,
+                                    const struct wireguard_x25519_key *preshared_key,
                                     uint16_t keep_alive, // Keep alive interval in seconds
                                     uint32_t index);      // The 24bit index prefix to be used for session indexes
 
 // Deallocate the tunnel
-void tunnel_free(struct wireguard_tunnel *);
+void wireguard_tunnel_free(struct wireguard_tunnel *);
 
 struct wireguard_result wireguard_write(const struct wireguard_tunnel *tunnel,
                                         const uint8_t *src,
@@ -111,11 +111,11 @@ struct wireguard_result wireguard_force_handshake(const struct wireguard_tunnel 
                                                   uint8_t *dst,
                                                   uint32_t dst_size);
 
-int32_t wireguard_parse_handshake_anon(const struct x25519_key *private_key,
-                                    const struct x25519_key *public_key,
+int32_t wireguard_parse_handshake_anon(const struct wireguard_x25519_key *private_key,
+                                    const struct wireguard_x25519_key *public_key,
                                     const uint8_t *src,
                                     uint32_t src_size,
-                                    struct x25519_key *peer_key);
+                                    struct wireguard_x25519_key *peer_key);
 
 #ifdef __cplusplus
 }

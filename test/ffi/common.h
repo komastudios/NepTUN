@@ -30,19 +30,19 @@ void setup_logging_callback(void);
 
 bool is_file(const char* path);
 
-int load_keypair(const char* name, struct x25519_key* key, struct x25519_key* pubkey);
+int load_keypair(const char* name, struct wireguard_x25519_key* key, struct wireguard_x25519_key* pubkey);
 
-int save_key(const char* name, struct x25519_key* key, struct x25519_key* pubkey);
+int save_key(const char* name, struct wireguard_x25519_key* key, struct wireguard_x25519_key* pubkey);
 
-void dump_key(const char* name, struct x25519_key* pubkey);
+void dump_key(const char* name, struct wireguard_x25519_key* pubkey);
 
 void dump_bytes(const uint8_t* buffer, size_t buffer_size);
 
 void dump_result(struct wireguard_result result, const uint8_t* buffer, size_t buffer_size);
 
-const char* print_key(struct x25519_key* pubkey);
+const char* print_key(struct wireguard_x25519_key* pubkey);
 
-int load_key_base64(struct x25519_key* key, const char* input);
+int load_key_base64(struct wireguard_x25519_key* key, const char* input);
 
 int sleep_ms(uint32_t ms);
 

@@ -100,7 +100,7 @@ pub struct x25519_key {
 
 /// Generates a new x25519 secret key.
 #[no_mangle]
-pub extern "C" fn x25519_secret_key() -> x25519_key {
+pub extern "C" fn wireguard_x25519_secret_key() -> x25519_key {
     x25519_key {
         key: StaticSecret::random_from_rng(OsRng).to_bytes(),
     }
@@ -108,7 +108,7 @@ pub extern "C" fn x25519_secret_key() -> x25519_key {
 
 /// Computes a public x25519 key from a secret key.
 #[no_mangle]
-pub extern "C" fn x25519_public_key(private_key: x25519_key) -> x25519_key {
+pub extern "C" fn wireguard_x25519_public_key(private_key: x25519_key) -> x25519_key {
     let private = StaticSecret::from(private_key.key);
     let public = PublicKey::from(&private);
     x25519_key {
@@ -120,7 +120,7 @@ pub extern "C" fn x25519_public_key(private_key: x25519_key) -> x25519_key {
 ///
 /// The memory has to be freed by calling `x25519_key_to_str_free`
 #[no_mangle]
-pub extern "C" fn x25519_key_to_base64(key: x25519_key) -> *const c_char {
+pub extern "C" fn wireguard_x25519_key_to_base64(key: x25519_key) -> *const c_char {
     let encoded_key = encode(key.key);
     CString::into_raw(CString::new(encoded_key).unwrap())
 }
@@ -129,21 +129,21 @@ pub extern "C" fn x25519_key_to_base64(key: x25519_key) -> *const c_char {
 ///
 /// The memory has to be freed by calling `x25519_key_to_str_free`
 #[no_mangle]
-pub extern "C" fn x25519_key_to_hex(key: x25519_key) -> *const c_char {
+pub extern "C" fn wireguard_x25519_key_to_hex(key: x25519_key) -> *const c_char {
     let encoded_key = encode_hex(key.key);
     CString::into_raw(CString::new(encoded_key).unwrap())
 }
 
 /// Frees memory of the string given by `x25519_key_to_hex` or `x25519_key_to_base64`
 #[no_mangle]
-pub unsafe extern "C" fn x25519_key_to_str_free(stringified_key: *mut c_char) {
+pub unsafe extern "C" fn wireguard_x25519_key_to_str_free(stringified_key: *mut c_char) {
     drop(CString::from_raw(stringified_key));
 }
 
 /// Check if the input C-string represents a valid base64 encoded x25519 key.
 /// Return 1 if valid 0 otherwise.
 #[no_mangle]
-pub unsafe extern "C" fn check_base64_encoded_x25519_key(key: *const c_char) -> i32 {
+pub unsafe extern "C" fn wireguard_check_base64_encoded_x25519_key(key: *const c_char) -> i32 {
     let c_str = CStr::from_ptr(key);
     let utf8_key = match c_str.to_str() {
         Err(_) => return 0,
@@ -207,7 +207,7 @@ impl Write for FFIFunctionPointerWriter {
 /// `c_char` will be freed by the library after calling `log_func`. If the value needs
 /// to be stored then `log_func` needs to create a copy, e.g. `strcpy`.
 #[no_mangle]
-pub unsafe extern "C" fn set_logging_function(
+pub unsafe extern "C" fn wireguard_set_logging_function(
     log_func: unsafe extern "C" fn(*const c_char),
 ) -> bool {
     let result = std::panic::catch_unwind(|| -> bool {
@@ -244,7 +244,7 @@ pub unsafe extern "C" fn set_logging_function(
 /// Allocate a new tunnel, return NULL on failure.
 /// Keys must be valid base64 encoded 32-byte keys.
 #[no_mangle]
-pub unsafe extern "C" fn new_tunnel(
+pub unsafe extern "C" fn wireguard_new_tunnel(
     static_private: *const x25519_key, // private_key: x25519_key
     server_static_public: *const x25519_key,
     preshared_key: *const x25519_key,
@@ -296,7 +296,7 @@ pub unsafe extern "C" fn new_tunnel(
 
 /// Drops the Tunn object
 #[no_mangle]
-pub unsafe extern "C" fn tunnel_free(tunnel: *mut Mutex<Tunn>) {
+pub unsafe extern "C" fn wireguard_tunnel_free(tunnel: *mut Mutex<Tunn>) {
     drop(Box::from_raw(tunnel));
 }
 

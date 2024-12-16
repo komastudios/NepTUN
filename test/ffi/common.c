@@ -51,13 +51,13 @@ bool is_file(const char* path)
     return !!f;
 }
 
-int load_keypair(const char* name, struct x25519_key* key, struct x25519_key* pubkey)
+int load_keypair(const char* name, struct wireguard_x25519_key* key, struct wireguard_x25519_key* pubkey)
 {
     int err = -1;
     char keyfile[PATH_MAX];
     snprintf(keyfile, sizeof(keyfile), "%s%s", name, KEYFILE_EXT);
     FILE* f = key ? fopen(keyfile, "rb") : NULL;
-    struct x25519_key kbuf;
+    struct wireguard_x25519_key kbuf;
     if (f) {
         err = fread(&kbuf, sizeof(kbuf), 1, f) ? 0 : -1;
         fclose(f);
@@ -75,7 +75,7 @@ int load_keypair(const char* name, struct x25519_key* key, struct x25519_key* pu
             *key = kbuf;
         }
         if (pubkey) {
-            *pubkey = x25519_public_key(kbuf);
+            *pubkey = wireguard_x25519_public_key(kbuf);
         }
     }
     else if (err == 1) {
@@ -86,7 +86,7 @@ int load_keypair(const char* name, struct x25519_key* key, struct x25519_key* pu
     return err;
 }
 
-int save_key(const char* name, struct x25519_key* key, struct x25519_key* pubkey)
+int save_key(const char* name, struct wireguard_x25519_key* key, struct wireguard_x25519_key* pubkey)
 {
     assert(key);
     assert(pubkey);
@@ -95,25 +95,25 @@ int save_key(const char* name, struct x25519_key* key, struct x25519_key* pubkey
     snprintf(keyfile, sizeof(keyfile), "%s%s", name, KEYFILE_EXT);
     FILE* f = fopen(keyfile, "wb");
     if (f) {
-        err = fwrite(key, sizeof(struct x25519_key), 1, f) == 1 ? 0 : -1;
+        err = fwrite(key, sizeof(struct wireguard_x25519_key), 1, f) == 1 ? 0 : -1;
         fclose(f);
     }
     snprintf(keyfile, sizeof(keyfile), "%s%s", name, PUBKEY_EXT);
     f = fopen(keyfile, "wb");
     if (f) {
-        err = fwrite(pubkey, sizeof(struct x25519_key), 1, f) == 1 ? 0 : -1;
+        err = fwrite(pubkey, sizeof(struct wireguard_x25519_key), 1, f) == 1 ? 0 : -1;
         fclose(f);
     }
     return err;
 }
 
-void dump_key(const char* name, struct x25519_key* pubkey)
+void dump_key(const char* name, struct wireguard_x25519_key* pubkey)
 {
     assert(pubkey);
-    const char* str = x25519_key_to_base64(*pubkey);
+    const char* str = wireguard_x25519_key_to_base64(*pubkey);
     assert(str);
     fprintf(stdout, "%s %s\n", name, str);
-    x25519_key_to_str_free(str);
+    wireguard_x25519_key_to_str_free(str);
 }
 
 static const char* result_type_str(int type)
@@ -183,23 +183,23 @@ void dump_result(struct wireguard_result result, const uint8_t* buffer, size_t b
     dump_bytes(buffer, result.size);
 }
 
-const char* print_key(struct x25519_key* pubkey)
+const char* print_key(struct wireguard_x25519_key* pubkey)
 {
     static char result[45];
     memset(result, 0, sizeof(result));
     if (pubkey) {
-        const char* str = x25519_key_to_base64(*pubkey);
+        const char* str = wireguard_x25519_key_to_base64(*pubkey);
         assert(str);
         snprintf(result, sizeof(result), "%s", str);
-        x25519_key_to_str_free(str);
+        wireguard_x25519_key_to_str_free(str);
     }
     return result;
 }
 
-int load_key_base64(struct x25519_key* key, const char* input)
+int load_key_base64(struct wireguard_x25519_key* key, const char* input)
 {
     assert(input);
-    struct x25519_key kbuf;
+    struct wireguard_x25519_key kbuf;
     memset(&kbuf, 0, sizeof(kbuf));
 
     uint8_t* out = &kbuf.key[0];
@@ -284,7 +284,7 @@ int read_signal(int* signal)
 
 void setup_logging_callback(void)
 {
-    set_logging_function(&wg_log_print);
+    wireguard_set_logging_function(&wg_log_print);
 }
 
 int sleep_ms(uint32_t ms)
